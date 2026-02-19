@@ -6,7 +6,7 @@ import ConvexClientProvider from "./ConvexClientProvider"; // 1. Import it
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Multiplayer Wordle",
+  title: "Multi-le",
   description: "Speedrun Wordle with friends",
 };
 
