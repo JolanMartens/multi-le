@@ -4,10 +4,8 @@ import { useWordle } from "@/hooks/useWordle";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
-import { useEffect } from "react";
-
-// Hardcoded solution for now! We will sync this to Convex later.
-const SOLUTION = "react";
+import { useEffect, useState } from "react";
+import Keyboard from "./Keyboard"; // 1. Import your keyboard!
 
 export default function WordleGame({
   lobby,
@@ -18,26 +16,52 @@ export default function WordleGame({
 }) {
   const { user } = useUser();
   const submitScore = useMutation(api.lobby.submitScore);
+  const endRound = useMutation(api.lobby.endRound); // 2. Hook up endRound
 
-  // Pass the server-generated target word to the hook!
-  const { guesses, currentGuess, isGameOver, isGameWon, errorMsg } = useWordle(
-    lobby.targetWord,
-  );
+  // 3. Extract onKeyPress!
+  const { guesses, currentGuess, isGameOver, isGameWon, errorMsg, onKeyPress } =
+    useWordle(lobby.targetWord);
 
-  // When the game is won, automatically send their score to Convex
+  // 4. The Live Timer State
+  const [timeStr, setTimeStr] = useState("0.0s");
+
   useEffect(() => {
-    if (isGameWon && user) {
+    if (isGameOver) return; // Stop timer when they finish
+    const interval = setInterval(() => {
+      setTimeStr(((Date.now() - lobby.startTime) / 1000).toFixed(1) + "s");
+    }, 100);
+    return () => clearInterval(interval);
+  }, [lobby.startTime, isGameOver]);
+
+  // 5. Submit Score on Game Over (Win OR Fail)
+  useEffect(() => {
+    if (isGameOver && user) {
       submitScore({
         lobbyId: lobby._id,
         playerName: user.firstName || "Anonymous",
         guesses: guesses.length,
+        solved: isGameWon, // Let the database know if they failed
       });
     }
-  }, [isGameWon, user, lobby._id, submitScore, guesses.length]);
+  }, [isGameOver]);
+
+  // 6. Auto-End Round Logic
+  const isHost = lobby.host === user?.firstName;
+  useEffect(() => {
+    // If we have scores for EVERY player in the lobby, the round is completely over!
+    if (
+      isHost &&
+      lobby.scores &&
+      lobby.scores.length === lobby.players.length &&
+      lobby.players.length > 0
+    ) {
+      // Give players 3 seconds to look at the final scoreboard before booting them back to the lobby
+      setTimeout(() => endRound({ lobbyId: lobby._id }), 3000);
+    }
+  }, [lobby.scores, lobby.players, isHost, endRound, lobby._id]);
 
   // Helper to figure out the box color...
   const getLetterColor = (letter: string, index: number) => {
-    // Make sure we compare against the lobby.targetWord!
     if (lobby.targetWord[index] === letter)
       return "bg-green-500 text-white border-green-500";
     if (lobby.targetWord.includes(letter))
@@ -46,33 +70,71 @@ export default function WordleGame({
   };
 
   return (
-    <div className="flex flex-col items-center gap-8 p-10 mt-10 w-full focus:outline-none">
+    <div className="flex flex-col items-center gap-6 p-4 sm:p-10 mt-4 sm:mt-10 w-full focus:outline-none">
       <div className="flex justify-between w-full max-w-md items-center">
         <h1 className="text-3xl font-bold tracking-tight">
           Wordle<span className="text-primary">Run</span>
         </h1>
+
+        {/* 7. The Live Timer UI */}
+        <div className="text-2xl font-mono font-bold text-primary">
+          {timeStr}
+        </div>
+
         <Button variant="destructive" size="sm" onClick={onLeave}>
           Quit
         </Button>
       </div>
 
-      {/* Game Over Message */}
       {isGameOver && (
         <div className="text-xl font-bold text-center animate-bounce">
           {isGameWon
             ? "🎉 You got it! Waiting for others..."
-            : `💀 Game Over! The word was ${SOLUTION.toUpperCase()}`}
+            : `💀 Game Over! The word was ${lobby.targetWord.toUpperCase()}`}
         </div>
       )}
 
-      {/* Error Message (e.g., "Not in word list") */}
+      {/* The Wordle Grid */}
+      <div className="grid grid-rows-6 gap-2">
+        {Array.from({ length: 6 }).map((_, rowIndex) => {
+          const isCurrentRow = rowIndex === guesses.length;
+          const isPastRow = rowIndex < guesses.length;
+          const rowWord = isPastRow
+            ? guesses[rowIndex]
+            : isCurrentRow
+              ? currentGuess
+              : "";
+
+          return (
+            <div key={rowIndex} className="grid grid-cols-5 gap-2">
+              {Array.from({ length: 5 }).map((_, colIndex) => {
+                const letter = rowWord[colIndex] || "";
+                const colorClass = isPastRow
+                  ? getLetterColor(letter, colIndex)
+                  : "border-border bg-background text-foreground";
+                const activeClass =
+                  isCurrentRow && letter ? "border-primary" : "";
+
+                return (
+                  <div
+                    key={colIndex}
+                    className={`w-14 h-14 sm:w-16 sm:h-16 border-2 flex items-center justify-center text-3xl font-bold uppercase transition-all duration-300 ${colorClass} ${activeClass}`}
+                  >
+                    {letter}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
       {errorMsg && (
         <div className="text-red-500 font-bold bg-red-100 px-4 py-2 rounded-md animate-pulse">
           {errorMsg}
         </div>
       )}
 
-      {/* Live Scoreboard */}
       {lobby.scores && lobby.scores.length > 0 && (
         <div className="w-full max-w-md bg-secondary/30 p-4 rounded-lg border">
           <h2 className="text-lg font-bold mb-2">Live Leaderboard 🏆</h2>
@@ -93,7 +155,9 @@ export default function WordleGame({
                   {score.playerName}
                 </span>
                 <span className="text-muted-foreground text-sm">
-                  {score.guesses} guesses • {(score.timeMs / 1000).toFixed(2)}s
+                  {score.solved
+                    ? `${score.guesses} guesses • ${(score.timeMs / 1000).toFixed(2)}s`
+                    : "Failed 💀"}
                 </span>
               </div>
             ))}
@@ -101,45 +165,12 @@ export default function WordleGame({
         </div>
       )}
 
-      {/* The Wordle Grid */}
-      <div className="grid grid-rows-6 gap-2">
-        {Array.from({ length: 6 }).map((_, rowIndex) => {
-          // Are we rendering a past guess, the current active typing row, or a future blank row?
-          const isCurrentRow = rowIndex === guesses.length;
-          const isPastRow = rowIndex < guesses.length;
-          const rowWord = isPastRow
-            ? guesses[rowIndex]
-            : isCurrentRow
-              ? currentGuess
-              : "";
-
-          return (
-            <div key={rowIndex} className="grid grid-cols-5 gap-2">
-              {Array.from({ length: 5 }).map((_, colIndex) => {
-                const letter = rowWord[colIndex] || "";
-
-                // Only color the box if the row has been submitted (isPastRow)
-                const colorClass = isPastRow
-                  ? getLetterColor(letter, colIndex)
-                  : "border-border bg-background text-foreground";
-
-                // Add a border highlight if this box currently has a typed letter in the active row
-                const activeClass =
-                  isCurrentRow && letter ? "border-primary" : "";
-
-                return (
-                  <div
-                    key={colIndex}
-                    className={`w-14 h-14 sm:w-16 sm:h-16 border-2 flex items-center justify-center text-3xl font-bold uppercase transition-all duration-300 ${colorClass} ${activeClass}`}
-                  >
-                    {letter}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
+      {/* 8. Render the Keyboard */}
+      <Keyboard
+        onKeyPress={onKeyPress}
+        guesses={guesses}
+        targetWord={lobby.targetWord}
+      />
     </div>
   );
 }

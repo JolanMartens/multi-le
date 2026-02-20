@@ -299,6 +299,40 @@ export default function LobbyPage({
           </Button>
         )}
       </div>
+      {/* Persistent Grand Leaderboard */}
+      {lobby.playerStats && lobby.playerStats.length > 0 && (
+        <div className="border p-6 rounded-lg shadow-sm bg-card mt-4">
+          <h2 className="text-xl font-semibold mb-4 text-primary">
+            Session Leaderboard 👑
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {/* Sort by wins, then by best time */}
+            {lobby.playerStats
+              .sort(
+                (a: any, b: any) => b.wins - a.wins || a.bestTime - b.bestTime,
+              )
+              .map((stat: any, index: number) => (
+                <li
+                  key={index}
+                  className="px-4 py-2 bg-background border rounded-md font-medium flex justify-between items-center"
+                >
+                  <span>
+                    {index + 1}. {stat.name}
+                  </span>
+                  <span className="text-muted-foreground text-sm flex gap-4">
+                    <span>🏆 {stat.wins} wins</span>
+                    <span>
+                      ⚡{" "}
+                      {stat.bestTime > 0
+                        ? (stat.bestTime / 1000).toFixed(2) + "s"
+                        : "--"}
+                    </span>
+                  </span>
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

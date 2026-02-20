@@ -18,6 +18,7 @@ export const createLobby = mutation({
       status: "waiting",
       selectedGame: "wordle",
       players: [args.hostName],
+      playerStats: [{ name: args.hostName, wins: 0, bestTime: 0 }],
       startTime: 0,
       shortCode: shortCode,
     });
@@ -77,6 +78,15 @@ export const joinLobby = mutation({
         players: [...lobby.players, args.playerName]
       });
     }
+    if (!lobby.players.includes(args.playerName)) {
+      const stats = lobby.playerStats || [];
+      stats.push({ name: args.playerName, wins: 0, bestTime: 0 }); // NEW: Add new player to stats
+      
+      await ctx.db.patch(args.lobbyId, {
+        players: [...lobby.players, args.playerName],
+        playerStats: stats
+      });
+    }
   },
 });
 
@@ -109,33 +119,64 @@ export const updateSelectedGame = mutation({
   },
 });
 
-// New mutation to record a player's finish time
+// Updated submitScore to handle wins, fails, and best times
 export const submitScore = mutation({
-  args: { 
-    lobbyId: v.id("lobbies"), 
-    playerName: v.string(), 
-    guesses: v.number() 
-  },
+  args: { lobbyId: v.id("lobbies"), playerName: v.string(), guesses: v.number(), solved: v.boolean() },
   handler: async (ctx, args) => {
     const lobby = await ctx.db.get(args.lobbyId);
     if (!lobby || !lobby.startTime) return;
 
-    // Calculate exactly how many milliseconds it took them
     const timeMs = Date.now() - lobby.startTime;
     const currentScores = lobby.scores || [];
+    let stats = lobby.playerStats || [];
 
-    // Make sure they haven't already submitted a score
     if (!currentScores.find((s: any) => s.playerName === args.playerName)) {
-      currentScores.push({
-        playerName: args.playerName,
-        timeMs: timeMs,
-        guesses: args.guesses
+      currentScores.push({ playerName: args.playerName, timeMs, guesses: args.guesses, solved: args.solved });
+      
+      // Sort: Solved games first, then by time
+      currentScores.sort((a: any, b: any) => {
+        if (a.solved && !b.solved) return -1;
+        if (!a.solved && b.solved) return 1;
+        return a.timeMs - b.timeMs;
       });
 
-      // Sort the scoreboard so the fastest times are always at the top!
-      currentScores.sort((a: any, b: any) => a.timeMs - b.timeMs);
+      // Update their personal best time if they solved it!
+      if (args.solved) {
+        stats = stats.map((p: any) => {
+          if (p.name === args.playerName) {
+            const best = p.bestTime === 0 ? timeMs : Math.min(p.bestTime, timeMs);
+            return { ...p, bestTime: best };
+          }
+          return p;
+        });
+      }
 
-      await ctx.db.patch(args.lobbyId, { scores: currentScores });
+      await ctx.db.patch(args.lobbyId, { scores: currentScores, playerStats: stats });
     }
   },
+});
+
+// Ends the round, gives the winner a point, and sends everyone to the lobby
+export const endRound = mutation({
+  args: { lobbyId: v.id("lobbies") },
+  handler: async (ctx, args) => {
+    const lobby = await ctx.db.get(args.lobbyId);
+    if (!lobby) return;
+
+    let stats = lobby.playerStats || [];
+    
+    // Find the speedrun winner (fastest time who solved it)
+    const solvers = lobby.scores.filter((s: any) => s.solved);
+    if (solvers.length > 0) {
+      const winnerName = solvers[0].playerName;
+      stats = stats.map((p: any) => p.name === winnerName ? { ...p, wins: p.wins + 1 } : p);
+    }
+
+    // Reset the lobby for the next game
+    await ctx.db.patch(args.lobbyId, {
+      status: "waiting",
+      playerStats: stats,
+      scores: [], 
+    });
+  }
 });
