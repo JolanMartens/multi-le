@@ -1,7 +1,7 @@
 "use client";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { use, useEffect } from "react";
+import { use, useEffect, useState, useRef } from "react";
 import { useUser, SignIn } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -28,29 +28,40 @@ export default function LobbyPage({
   });
   const joinLobby = useMutation(api.lobby.joinLobby);
 
-  // 3. The Auto-Join Logic
+  // This remembers if the user successfully joined this session
+  const [wasInLobby, setWasInLobby] = useState(false);
+
+  // This prevents the app from spamming the database while waiting for it to update
+  const joinAttempted = useRef(false);
+
   useEffect(() => {
     if (lobby && isSignedIn && user) {
       const playerName = user.firstName || "Anonymous";
 
-      // 1. If the host left and canceled the lobby, boot everyone to the homepage
       if (lobby.status === "canceled") {
         router.push("/");
         return;
       }
 
-      // 2. If this specific user was kicked (or left voluntarily), boot them
-      if (lobby.kickedPlayers?.includes(playerName)) {
-        router.push("/");
-        return;
-      }
+      // Check if the player is currently in the database list
+      const isInLobby = lobby.players.includes(playerName);
 
-      // 3. Normal auto-join for new players
-      if (!lobby.players.includes(playerName)) {
-        joinLobby({ lobbyId: lobby._id, playerName });
+      if (isInLobby) {
+        // They successfully joined! Remember this for later.
+        setWasInLobby(true);
+      } else {
+        // They are NOT in the lobby.
+        if (wasInLobby) {
+          // If they WERE in the lobby, but now they aren't, they got kicked! Boot them.
+          router.push("/");
+        } else if (!joinAttempted.current) {
+          // If they haven't been in the lobby yet, join them!
+          joinAttempted.current = true;
+          joinLobby({ lobbyId: lobby._id, playerName });
+        }
       }
     }
-  }, [lobby, isSignedIn, user, joinLobby, router]);
+  }, [lobby, isSignedIn, user, joinLobby, router, wasInLobby]);
 
   // Check if the currently logged-in user is the host
   const isHost = lobby?.host === user?.firstName;
