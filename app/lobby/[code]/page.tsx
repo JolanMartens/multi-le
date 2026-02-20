@@ -4,6 +4,7 @@ import { api } from "@/convex/_generated/api";
 import { use, useEffect, useState, useRef } from "react";
 import { useUser, SignIn } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useRouter } from "next/navigation";
 
 // Notice we changed params.id to params.code to match the new folder name!
@@ -122,6 +123,100 @@ export default function LobbyPage({
       </div>
 
       <p className="text-muted-foreground">Status: {lobby.status}</p>
+      {isHost && (
+        <div>
+          <h4 className="text-lg font-semibold">Select a game:</h4>
+          <ToggleGroup
+            type="single"
+            size="sm"
+            defaultValue="wordle" // Changed from "top" to match an actual value
+            variant="outline"
+            spacing={2}
+            className="mt-2 w-full flex" // Ensure the parent takes up enough space
+          >
+            <ToggleGroupItem
+              value="wordle"
+              aria-label="Toggle wordle"
+              // Added flex-1 to distribute width equally, and h-auto to prevent clipping
+              className="flex-1 h-auto border-none shadow-none py-2"
+            >
+              <div className="flex flex-col items-center gap-2">
+                {/* Added fixed width/height to images to prevent layout shifts */}
+                <img
+                  src="/wordle-logo.svg"
+                  alt=""
+                  className="w-8 h-8 object-contain"
+                />
+                <span>wordle</span>
+              </div>
+            </ToggleGroupItem>
+
+            <ToggleGroupItem
+              disabled
+              value="statele"
+              aria-label="Toggle statele"
+              className="flex-1 h-auto border-none shadow-none py-2"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <img
+                  src="/statele-logo.svg"
+                  alt=""
+                  className="w-8 h-8 object-contain"
+                />
+                <span>statele</span>
+              </div>
+            </ToggleGroupItem>
+
+            <ToggleGroupItem
+              disabled
+              value="worldle"
+              aria-label="Toggle worldle"
+              className="flex-1 h-auto border-none shadow-none py-2"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <img
+                  src="/worldle-logo.svg"
+                  alt=""
+                  className="w-8 h-8 object-contain"
+                />
+                <span>worldle</span>
+              </div>
+            </ToggleGroupItem>
+
+            <ToggleGroupItem
+              disabled
+              value="framed"
+              aria-label="Toggle framed"
+              className="flex-1 h-auto border-none shadow-none py-2"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <img
+                  src="/framed-logo.svg"
+                  alt=""
+                  className="w-8 h-8 object-contain"
+                />
+                <span>framed</span>
+              </div>
+            </ToggleGroupItem>
+
+            <ToggleGroupItem
+              disabled
+              value="moviedle"
+              aria-label="Toggle moviedle"
+              className="flex-1 h-auto border-none shadow-none py-2"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <img
+                  src="/moviedle-logo.svg"
+                  alt=""
+                  className="w-8 h-8 object-contain"
+                />
+                <span>moviedle</span>
+              </div>
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+      )}
 
       <div className="border p-6 rounded-lg shadow-sm bg-card mt-4">
         <h2 className="text-xl font-semibold mb-4">
