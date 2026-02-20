@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { ANSWERS } from "../lib/words";
 
 // Helper to generate a 6-character random room code
 function generateShortCode() {
@@ -14,7 +15,8 @@ export const createLobby = mutation({
     
     await ctx.db.insert("lobbies", {
       host: args.hostName,
-      status: "waiting", 
+      status: "waiting",
+      selectedGame: "wordle",
       players: [args.hostName],
       startTime: 0,
       shortCode: shortCode,
@@ -78,4 +80,62 @@ export const joinLobby = mutation({
   },
 });
 
+export const startGame = mutation({
+  args: { lobbyId: v.id("lobbies") },
+  handler: async (ctx, args) => {
+    const lobby = await ctx.db.get(args.lobbyId);
+    if (!lobby) throw new Error("Lobby not found");
 
+    // Pick a random word from your answers array!
+    const randomWord = ANSWERS[Math.floor(Math.random() * ANSWERS.length)];
+
+    await ctx.db.patch(args.lobbyId, {
+      status: "playing",
+      startTime: Date.now(), 
+      targetWord: randomWord, // Store the answer secretly on the server
+      scores: [], // Reset the scoreboard!
+    });
+  },
+});
+
+// Let the host change the game
+export const updateSelectedGame = mutation({
+  args: { lobbyId: v.id("lobbies"), game: v.string() },
+  handler: async (ctx, args) => {
+    const lobby = await ctx.db.get(args.lobbyId);
+    if (!lobby) throw new Error("Lobby not found");
+
+    await ctx.db.patch(args.lobbyId, { selectedGame: args.game });
+  },
+});
+
+// New mutation to record a player's finish time
+export const submitScore = mutation({
+  args: { 
+    lobbyId: v.id("lobbies"), 
+    playerName: v.string(), 
+    guesses: v.number() 
+  },
+  handler: async (ctx, args) => {
+    const lobby = await ctx.db.get(args.lobbyId);
+    if (!lobby || !lobby.startTime) return;
+
+    // Calculate exactly how many milliseconds it took them
+    const timeMs = Date.now() - lobby.startTime;
+    const currentScores = lobby.scores || [];
+
+    // Make sure they haven't already submitted a score
+    if (!currentScores.find((s: any) => s.playerName === args.playerName)) {
+      currentScores.push({
+        playerName: args.playerName,
+        timeMs: timeMs,
+        guesses: args.guesses
+      });
+
+      // Sort the scoreboard so the fastest times are always at the top!
+      currentScores.sort((a: any, b: any) => a.timeMs - b.timeMs);
+
+      await ctx.db.patch(args.lobbyId, { scores: currentScores });
+    }
+  },
+});

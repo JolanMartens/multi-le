@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useRouter } from "next/navigation";
 
+// import game components
+import WordleGame from "@/components/games/WordleGame";
+
 // Notice we changed params.id to params.code to match the new folder name!
 export default function LobbyPage({
   params,
@@ -19,6 +22,9 @@ export default function LobbyPage({
 
   const router = useRouter();
   const leaveLobby = useMutation(api.lobby.leaveLobby);
+
+  const startGame = useMutation(api.lobby.startGame);
+  const updateSelectedGame = useMutation(api.lobby.updateSelectedGame);
 
   // 1. Get Clerk user state
   const { user, isLoaded, isSignedIn } = useUser();
@@ -107,6 +113,20 @@ export default function LobbyPage({
   if (lobby === null)
     return <div className="p-10 font-bold text-red-500">Lobby not found!</div>;
 
+  // --- THE COMPONENT ROUTER ---
+  if (lobby.status === "playing") {
+    if (lobby.selectedGame === "wordle") {
+      return <WordleGame lobby={lobby} onLeave={handleLeave} />;
+    }
+    if (lobby.selectedGame === "statele") {
+      return (
+        <div className="p-10 text-center font-bold text-2xl">
+          Statele Coming Soon...
+        </div>
+      );
+    }
+  }
+
   // State 5: Everything is loaded!
   return (
     <div className="flex flex-col gap-4 p-10 max-w-xl mx-auto mt-10">
@@ -121,8 +141,20 @@ export default function LobbyPage({
           </Button>
         </div>
       </div>
+      <div className="flex justify-between">
+        <p className="text-muted-foreground">Status: {lobby.status}</p>
+        {!isHost && (
+          <div className="inline-flex items-center">
+            <p className="text-muted-foreground pr-2">Game:</p>
+            <img
+              src={`/${lobby.selectedGame}-logo.svg`}
+              alt=""
+              className="h-[2em] w-auto"
+            />
+          </div>
+        )}
+      </div>
 
-      <p className="text-muted-foreground">Status: {lobby.status}</p>
       {isHost && (
         <div>
           <h4 className="text-lg font-semibold">Select a game:</h4>
@@ -132,6 +164,13 @@ export default function LobbyPage({
             defaultValue="wordle" // Changed from "top" to match an actual value
             variant="outline"
             spacing={2}
+            value={lobby.selectedGame} // Read the current game from the database!
+            onValueChange={(value) => {
+              // If a value is clicked, and the person is the host, update the DB
+              if (value && isHost) {
+                updateSelectedGame({ lobbyId: lobby._id, game: value });
+              }
+            }}
             className="mt-2 w-full flex" // Ensure the parent takes up enough space
           >
             <ToggleGroupItem
@@ -152,7 +191,6 @@ export default function LobbyPage({
             </ToggleGroupItem>
 
             <ToggleGroupItem
-              disabled
               value="statele"
               aria-label="Toggle statele"
               className="flex-1 h-auto border-none shadow-none py-2"
@@ -168,7 +206,7 @@ export default function LobbyPage({
             </ToggleGroupItem>
 
             <ToggleGroupItem
-              disabled
+              //disabled
               value="worldle"
               aria-label="Toggle worldle"
               className="flex-1 h-auto border-none shadow-none py-2"
@@ -184,7 +222,7 @@ export default function LobbyPage({
             </ToggleGroupItem>
 
             <ToggleGroupItem
-              disabled
+              //disabled
               value="framed"
               aria-label="Toggle framed"
               className="flex-1 h-auto border-none shadow-none py-2"
@@ -200,7 +238,7 @@ export default function LobbyPage({
             </ToggleGroupItem>
 
             <ToggleGroupItem
-              disabled
+              //disabled
               value="moviedle"
               aria-label="Toggle moviedle"
               className="flex-1 h-auto border-none shadow-none py-2"
@@ -219,9 +257,13 @@ export default function LobbyPage({
       )}
 
       <div className="border p-6 rounded-lg shadow-sm bg-card mt-4">
-        <h2 className="text-xl font-semibold mb-4">
-          Players Joined ({lobby.players.length}):
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Players Joined:</h2>
+          <div className="inline-flex items-center gap-1">
+            <h2 className="text-xl font-semibold">{lobby.players.length}</h2>
+            <img src="/fatcat.png" alt="" className="h-[2em] w-auto" />
+          </div>
+        </div>
         <ul className="flex flex-col gap-2">
           {lobby.players.map((player: string, index: number) => (
             <li
@@ -251,7 +293,7 @@ export default function LobbyPage({
           <Button
             className="w-full mt-6"
             size="lg"
-            onClick={() => alert("Start Game logic goes here!")}
+            onClick={() => startGame({ lobbyId: lobby._id })}
           >
             Start Game
           </Button>

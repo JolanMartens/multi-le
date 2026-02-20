@@ -59,7 +59,7 @@ export default function HomePage() {
           Multi<span className="text-primary">-LE</span>
         </h1>
         <p className="text-xl text-muted-foreground">
-          Speedrun famous <b>-le</b> type game against your friends.
+          Play famous <b>-le</b> type games against your friends.
         </p>
         <div className="flex h-5 items-center gap-4 text-sm justify-center">
           <p>Wordle</p>
