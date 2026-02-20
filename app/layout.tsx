@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import ConvexClientProvider from "./ConvexClientProvider"; // 1. Import it
@@ -20,6 +21,7 @@ export default function RootLayout({
       <body className={inter.className}>
         {/* 2. Wrap children with the provider */}
         <ConvexClientProvider>{children}</ConvexClientProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
