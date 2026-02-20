@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SignInButton, UserButton, useUser } from "@clerk/nextjs"; // 1. Import Clerk hooks
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 
 export default function HomePage() {
   const createLobby = useMutation(api.lobby.createLobby);
@@ -60,7 +61,17 @@ export default function HomePage() {
         <p className="text-xl text-muted-foreground">
           Speedrun famous <b>-le</b> type game against your friends.
         </p>
-        <p>worlde - statle - worldle - framed - moviedle - ...</p>
+        <div className="flex h-5 items-center gap-4 text-sm justify-center">
+          <p>Wordle</p>
+          <Separator orientation="vertical" />
+          <p>Statele</p>
+          <Separator orientation="vertical" />
+          <p>Worldle</p>
+          <Separator orientation="vertical" />
+          <p>Framed</p>
+          <Separator orientation="vertical" />
+          <p>Moviedle</p>
+        </div>
       </div>
 
       {/* 5. Show Create/Join if logged in, otherwise force login */}
