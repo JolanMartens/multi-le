@@ -184,19 +184,37 @@ export default function LobbyPage({
       </div>
       <div className="flex justify-between w-full">
         <div className="inline-flex items-center gap-4 w-full">
-          <Button
-            onClick={() =>
-              changeIsPublic({ lobbyId: lobby._id, isPublic: !lobby.isPublic })
-            }
-            variant={lobby.isPublic ? "outline" : "default"}
-            className={
-              lobby.isPublic
-                ? "bg-sky-500 text-white hover:bg-sky-400"
-                : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-            }
-          >
-            {lobby.isPublic ? "Public" : "Private"}
-          </Button>
+          {!isHost && (
+            <Button
+              disabled
+              variant="default"
+              className={
+                lobby.isPublic
+                  ? "bg-sky-500 text-white"
+                  : "bg-gray-200 text-gray-800"
+              }
+            >
+              {lobby.isPublic ? "Public" : "Private"}
+            </Button>
+          )}
+          {isHost && (
+            <Button
+              onClick={() =>
+                changeIsPublic({
+                  lobbyId: lobby._id,
+                  isPublic: !lobby.isPublic,
+                })
+              }
+              variant={lobby.isPublic ? "outline" : "default"}
+              className={
+                lobby.isPublic
+                  ? "bg-sky-500 text-white hover:bg-sky-400"
+                  : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+              }
+            >
+              {lobby.isPublic ? "Public" : "Private"}
+            </Button>
+          )}
           <p className="text-muted-foreground">Status: {lobby.status}</p>
         </div>
 
