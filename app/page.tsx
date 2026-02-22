@@ -7,6 +7,14 @@ import { SignInButton, UserButton, useUser } from "@clerk/nextjs"; // 1. Import 
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function HomePage() {
   const createLobby = useMutation(api.lobby.createLobby);
@@ -29,7 +37,7 @@ export default function HomePage() {
 
     try {
       const newLobbyId = await createLobby({
-        hostName: user.firstName || "Anonymous Player",
+        hostName: user.username || user.id, // Use username if available, otherwise fallback to user ID
       });
 
       router.push(`/lobby/${newLobbyId}`);
@@ -84,6 +92,29 @@ export default function HomePage() {
           >
             Create New Game
           </Button>
+          <Dialog>
+            {/* The Trigger is what opens the popup. asChild passes the click to your Button */}
+            <DialogTrigger asChild>
+              <Button size="lg" className="text-lg px-8 w-full">
+                View Public Lobbies
+              </Button>
+            </DialogTrigger>
+
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Public Lobbies</DialogTitle>
+                <DialogDescription>
+                  Select a public lobby below to join a game.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="py-4">
+                <p className="text-sm text-muted-foreground text-center">
+                  Loading lobbies...
+                </p>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <div className="flex items-center gap-2 mt-4">
             <Input
@@ -91,9 +122,19 @@ export default function HomePage() {
               maxLength={6}
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleJoinGame();
+                }
+              }}
               className="uppercase w-48 text-center text-lg tracking-widest"
             />
-            <Button onClick={handleJoinGame} variant="secondary" size="lg">
+            <Button
+              onClick={handleJoinGame}
+              variant="secondary"
+              size="lg"
+              className="bg-blue-400 hover:bg-blue-300"
+            >
               Join
             </Button>
           </div>

@@ -38,27 +38,14 @@ export default function WordleGame({
     if (isGameOver && user) {
       submitScore({
         lobbyId: lobby._id,
-        playerName: user.firstName || "Anonymous",
+        playerName: user.username || user.id,
         guesses: guesses.length,
         solved: isGameWon, // Let the database know if they failed
       });
     }
   }, [isGameOver]);
 
-  // 6. Auto-End Round Logic
-  const isHost = lobby.host === user?.firstName;
-  useEffect(() => {
-    // If we have scores for EVERY player in the lobby, the round is completely over!
-    if (
-      isHost &&
-      lobby.scores &&
-      lobby.scores.length === lobby.players.length &&
-      lobby.players.length > 0
-    ) {
-      // Give players 3 seconds to look at the final scoreboard before booting them back to the lobby
-      setTimeout(() => endRound({ lobbyId: lobby._id }), 3000);
-    }
-  }, [lobby.scores, lobby.players, isHost, endRound, lobby._id]);
+  const isHost = lobby.host === (user?.username || user?.id);
 
   // Helper to figure out the box color...
   const getLetterColor = (letter: string, index: number) => {
@@ -70,7 +57,7 @@ export default function WordleGame({
   };
 
   return (
-    <div className="flex flex-col items-center gap-6 p-4 sm:p-10 mt-4 sm:mt-10 w-full focus:outline-none">
+    <div className="flex flex-col items-center gap-6 p-4 sm:p-10 mt-2 sm:mt-5 w-full focus:outline-none">
       <div className="flex justify-between w-full max-w-md items-center">
         <h1 className="text-3xl font-bold tracking-tight">
           Wordle<span className="text-primary">Run</span>
@@ -89,8 +76,8 @@ export default function WordleGame({
       {isGameOver && (
         <div className="text-xl font-bold text-center animate-bounce">
           {isGameWon
-            ? "🎉 You got it! Waiting for others..."
-            : `💀 Game Over! The word was ${lobby.targetWord.toUpperCase()}`}
+            ? "You got it!"
+            : `Game Over! The word was ${lobby.targetWord.toUpperCase()}`}
         </div>
       )}
 
@@ -135,42 +122,58 @@ export default function WordleGame({
         </div>
       )}
 
-      {lobby.scores && lobby.scores.length > 0 && (
-        <div className="w-full max-w-md bg-secondary/30 p-4 rounded-lg border">
-          <h2 className="text-lg font-bold mb-2">Live Leaderboard 🏆</h2>
-          <div className="flex flex-col gap-1">
-            {lobby.scores.map((score: any, index: number) => (
-              <div
-                key={index}
-                className="flex justify-between items-center bg-background p-2 rounded border-sm"
-              >
-                <span className="font-semibold">
-                  {index === 0
-                    ? "🥇"
-                    : index === 1
-                      ? "🥈"
-                      : index === 2
-                        ? "🥉"
-                        : `${index + 1}.`}{" "}
-                  {score.playerName}
-                </span>
-                <span className="text-muted-foreground text-sm">
-                  {score.solved
-                    ? `${score.guesses} guesses • ${(score.timeMs / 1000).toFixed(2)}s`
-                    : "Failed 💀"}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 8. Render the Keyboard */}
+      {/* Render the Keyboard */}
       <Keyboard
         onKeyPress={onKeyPress}
         guesses={guesses}
         targetWord={lobby.targetWord}
       />
+
+      {/* Host Control: End Round Manually */}
+      {isHost && (
+        <Button
+          className="w-full max-w-md mt-4 font-bold"
+          size="lg"
+          onClick={() => endRound({ lobbyId: lobby._id })}
+        >
+          End Round & Return to Lobby
+        </Button>
+      )}
+      <div className="fixed right-4 top-30 w-90 hidden xl:block">
+        {lobby.scores && lobby.scores.length > 0 && (
+          <div className="w-full max-w-md bg-secondary/30 p-4 rounded-lg border">
+            <h2 className="text-lg font-bold mb-2">Live Leaderboard</h2>
+            <div className="flex flex-col gap-1">
+              {lobby.scores.map((score: any, index: number) => (
+                <div
+                  key={index}
+                  className="flex justify-between items-center bg-background p-2 rounded border-sm"
+                >
+                  <span className="font-semibold flex">
+                    {index === 0 ? (
+                      <p className="text-yellow-500 w-10">1st</p>
+                    ) : index === 1 ? (
+                      <p className="text-zinc-400 w-10">2nd</p>
+                    ) : index === 2 ? (
+                      <p className="text-amber-800 w-10">3rd</p>
+                    ) : (
+                      <p className="text-muted-foreground w-10">
+                        {index + 1}th
+                      </p>
+                    )}{" "}
+                    {score.playerName}
+                  </span>
+                  <span className="text-muted-foreground text-sm">
+                    {score.solved
+                      ? `${score.guesses} guesses • ${(score.timeMs / 1000).toFixed(2)}s`
+                      : "Failed"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

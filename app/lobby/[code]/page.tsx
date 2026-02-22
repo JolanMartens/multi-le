@@ -43,7 +43,7 @@ export default function LobbyPage({
 
   useEffect(() => {
     if (lobby && isSignedIn && user) {
-      const playerName = user.firstName || "Anonymous";
+      const playerName = user.username || user.id;
 
       if (lobby.status === "canceled") {
         router.push("/");
@@ -71,7 +71,7 @@ export default function LobbyPage({
   }, [lobby, isSignedIn, user, joinLobby, router, wasInLobby]);
 
   // Check if the currently logged-in user is the host
-  const isHost = lobby?.host === user?.firstName;
+  const isHost = lobby?.host === (user?.username || user?.id);
 
   const handleKick = (playerName: string) => {
     if (lobby) {
@@ -81,7 +81,7 @@ export default function LobbyPage({
 
   const handleLeave = () => {
     if (lobby && user) {
-      const playerName = user.firstName || "Anonymous";
+      const playerName = user.username || user.id;
       leaveLobby({ lobbyId: lobby._id, playerName });
       router.push("/"); // Instantly send the person clicking it back home
     }
@@ -90,7 +90,8 @@ export default function LobbyPage({
   // --- RENDERING STATES ---
 
   // State 1: Clerk is figuring out if they are logged in
-  if (!isLoaded) return <div className="p-10 font-bold">Loading Auth...</div>;
+  if (!isLoaded)
+    return <div className="p-10 pt-5 font-bold">Loading Auth...</div>;
 
   // State 2: User is NOT logged in. Force them to log in here.
   if (!isSignedIn) {
@@ -133,7 +134,13 @@ export default function LobbyPage({
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Game Lobby</h1>
         <div className="flex gap-4 items-center">
-          <div className="bg-primary text-primary-foreground px-4 py-1 rounded-md text-xl font-mono tracking-widest">
+          <div
+            className="bg-primary text-primary-foreground px-4 py-1 rounded-md text-xl font-mono tracking-widest cursor-pointer hover:opacity-90 transition-opacity"
+            title="Click to copy join code"
+            onClick={() => {
+              navigator.clipboard.writeText(lobby.shortCode);
+            }}
+          >
             {lobby.shortCode}
           </div>
           <Button variant="destructive" onClick={handleLeave}>
@@ -206,7 +213,7 @@ export default function LobbyPage({
             </ToggleGroupItem>
 
             <ToggleGroupItem
-              //disabled
+              disabled
               value="worldle"
               aria-label="Toggle worldle"
               className="flex-1 h-auto border-none shadow-none py-2"
@@ -222,7 +229,7 @@ export default function LobbyPage({
             </ToggleGroupItem>
 
             <ToggleGroupItem
-              //disabled
+              disabled
               value="framed"
               aria-label="Toggle framed"
               className="flex-1 h-auto border-none shadow-none py-2"
@@ -238,7 +245,7 @@ export default function LobbyPage({
             </ToggleGroupItem>
 
             <ToggleGroupItem
-              //disabled
+              disabled
               value="moviedle"
               aria-label="Toggle moviedle"
               className="flex-1 h-auto border-none shadow-none py-2"
@@ -271,7 +278,14 @@ export default function LobbyPage({
               className="px-4 py-2 bg-secondary rounded-md font-medium flex justify-between items-center"
             >
               <span>
-                {player} {player === lobby.host && "👑"}
+                {player}{" "}
+                {player === lobby.host && (
+                  <img
+                    src="/crown.svg"
+                    alt="Host"
+                    className="inline h-3 w-3 ml-1 align-middle"
+                  />
+                )}
               </span>
 
               {/* Only the host sees the Kick button, and they can't kick themselves */}
@@ -303,11 +317,13 @@ export default function LobbyPage({
       {lobby.playerStats && lobby.playerStats.length > 0 && (
         <div className="border p-6 rounded-lg shadow-sm bg-card mt-4">
           <h2 className="text-xl font-semibold mb-4 text-primary">
-            Session Leaderboard 👑
+            Session Leaderboard
           </h2>
           <ul className="flex flex-col gap-2">
             {/* Sort by wins, then by best time */}
             {lobby.playerStats
+              // Only keep players that are currently in the lobby!
+              .filter((stat: any) => lobby.players.includes(stat.name))
               .sort(
                 (a: any, b: any) => b.wins - a.wins || a.bestTime - b.bestTime,
               )
@@ -320,7 +336,7 @@ export default function LobbyPage({
                     {index + 1}. {stat.name}
                   </span>
                   <span className="text-muted-foreground text-sm flex gap-4">
-                    <span>🏆 {stat.wins} wins</span>
+                    <span>{stat.wins} wins</span>
                     <span>
                       ⚡{" "}
                       {stat.bestTime > 0

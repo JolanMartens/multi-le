@@ -45,15 +45,25 @@ export const leaveLobby = mutation({
     const lobby = await ctx.db.get(args.lobbyId);
     if (!lobby) return;
 
-    if (lobby.host === args.playerName) {
-      await ctx.db.patch(args.lobbyId, { status: "canceled" });
+    // Remove the player from the active list
+    const updatedPlayers = lobby.players.filter((p: string) => p !== args.playerName);
+
+    if (updatedPlayers.length === 0) {
+      // 1. Everyone left! We can safely close down the lobby.
+      await ctx.db.patch(args.lobbyId, { status: "canceled", players: [] });
+    } else if (lobby.host === args.playerName) {
+      // 2. The host left, but others are still here. Pass the crown!
+      const newHost = updatedPlayers[0]; // Give it to the next person in line
+      await ctx.db.patch(args.lobbyId, { 
+        players: updatedPlayers,
+        host: newHost 
+      });
     } else {
-      const updatedPlayers = lobby.players.filter((p: string) => p !== args.playerName);
+      // 3. A regular player left. Just update the player list.
       await ctx.db.patch(args.lobbyId, { players: updatedPlayers });
     }
   },
 });
-
 // New Query: Find a lobby by its short code
 export const getLobbyByCode = query({
   args: { shortCode: v.string() },
@@ -72,21 +82,26 @@ export const joinLobby = mutation({
     const lobby = await ctx.db.get(args.lobbyId);
     if (!lobby) throw new Error("Lobby not found");
     
-    // Only add the player if they aren't already in the list
+    // 1. Add to active players if they aren't already in it
+    let updatedPlayers = lobby.players;
     if (!lobby.players.includes(args.playerName)) {
-      await ctx.db.patch(args.lobbyId, {
-        players: [...lobby.players, args.playerName]
-      });
+      updatedPlayers = [...lobby.players, args.playerName];
     }
-    if (!lobby.players.includes(args.playerName)) {
-      const stats = lobby.playerStats || [];
-      stats.push({ name: args.playerName, wins: 0, bestTime: 0 }); // NEW: Add new player to stats
-      
-      await ctx.db.patch(args.lobbyId, {
-        players: [...lobby.players, args.playerName],
-        playerStats: stats
-      });
+
+    // 2. Add to stats ONLY if they don't already have a stats profile
+    let updatedStats = lobby.playerStats || [];
+    const hasStats = updatedStats.some((p: any) => p.name === args.playerName);
+    
+    if (!hasStats) {
+      console.log(`Creating stats profile for ${args.playerName}`);
+      updatedStats.push({ name: args.playerName, wins: 0, bestTime: 0 });
     }
+
+    // 3. Push both updates to the database in one go
+    await ctx.db.patch(args.lobbyId, {
+      players: updatedPlayers,
+      playerStats: updatedStats
+    });
   },
 });
 
