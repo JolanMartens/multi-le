@@ -1,5 +1,5 @@
 "use client";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,9 @@ import {
 export default function HomePage() {
   const createLobby = useMutation(api.lobby.createLobby);
   const router = useRouter();
+
+  // Get the list of public lobbies
+  const publicLobbies = useQuery(api.lobby.getPublicLobbies);
 
   // get the current user's data from Clerk
   const { user, isSignedIn } = useUser();
@@ -92,10 +95,25 @@ export default function HomePage() {
           >
             Create New Game
           </Button>
+
+          <div className="w-full max-w-sm">
+            <div className="relative flex items-center gap-2">
+              <Separator className="flex-1" />
+              <span className="shrink-0 px-2 text-muted-foreground text-xs uppercase">
+                OR
+              </span>
+              <Separator className="flex-1" />
+            </div>
+          </div>
+
           <Dialog>
             {/* The Trigger is what opens the popup. asChild passes the click to your Button */}
             <DialogTrigger asChild>
-              <Button size="lg" className="text-lg px-8 w-full">
+              <Button
+                size="lg"
+                className="text-lg px-8 w-full"
+                variant="outline"
+              >
                 View Public Lobbies
               </Button>
             </DialogTrigger>
@@ -109,14 +127,60 @@ export default function HomePage() {
               </DialogHeader>
 
               <div className="py-4">
-                <p className="text-sm text-muted-foreground text-center">
-                  Loading lobbies...
-                </p>
+                <div className="py-4 flex flex-col gap-2 max-h-[300px] overflow-y-auto">
+                  {/* STATE 1: Still fetching from Convex (undefined) */}
+                  {publicLobbies === undefined && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Searching for games...
+                    </p>
+                  )}
+
+                  {/* STATE 2: Finished fetching, but the array is empty */}
+                  {publicLobbies !== undefined &&
+                    publicLobbies.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No public lobbies open right now. Be the first to create
+                        one!
+                      </p>
+                    )}
+
+                  {/* STATE 3: We have lobbies! Map through the array. */}
+                  {publicLobbies !== undefined &&
+                    publicLobbies.length > 0 &&
+                    publicLobbies.map((lobby) => (
+                      // The wrapper for each individual lobby
+                      <div
+                        key={lobby._id}
+                        className="flex items-center justify-between p-3 border rounded-md hover:bg-muted cursor-pointer transition-colors"
+                        onClick={() => router.push(`/lobby/${lobby.shortCode}`)}
+                      >
+                        <div>
+                          <p className="font-semibold">{lobby.host}'s Game</p>
+                          <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                            {lobby.players.length}
+                            <img
+                              src={`/users.svg`}
+                              alt=""
+                              className="h-[1.5em] w-auto"
+                            />
+                            /
+                            <img
+                              src={`/${lobby.selectedGame}-logo.svg`}
+                              alt=""
+                              className="h-[2em] w-auto"
+                            />
+                          </p>
+                        </div>
+                        <Button size="sm" variant="secondary">
+                          Join
+                        </Button>
+                      </div>
+                    ))}
+                </div>
               </div>
             </DialogContent>
           </Dialog>
-
-          <div className="flex items-center gap-2 mt-4">
+          <div className="flex items-center gap-2">
             <Input
               placeholder="Enter code"
               maxLength={6}

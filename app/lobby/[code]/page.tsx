@@ -41,6 +41,38 @@ export default function LobbyPage({
   // This prevents the app from spamming the database while waiting for it to update
   const joinAttempted = useRef(false);
 
+  // Track the latest lobby ID and player name for cleanup
+  const lobbyIdRef = useRef(lobby?._id);
+  const playerNameRef = useRef(user?.username || user?.id);
+
+  // Keep the refs perfectly up to date whenever lobby or user changes
+  useEffect(() => {
+    lobbyIdRef.current = lobby?._id;
+    playerNameRef.current = user?.username || user?.id;
+  }, [lobby?._id, user]);
+
+  // The Cleanup Effect: Catches back button & tab closes
+  useEffect(() => {
+    const handleUnload = () => {
+      if (lobbyIdRef.current && playerNameRef.current) {
+        // Fire the leave mutation
+        leaveLobby({
+          lobbyId: lobbyIdRef.current,
+          playerName: playerNameRef.current,
+        });
+      }
+    };
+
+    // Listen for the tab/browser closing or refreshing
+    window.addEventListener("beforeunload", handleUnload);
+
+    // Return a cleanup function for when React unmounts the component (Back button)
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+      handleUnload();
+    };
+  }, [leaveLobby]); // Only depends on the leaveLobby function itself
+
   useEffect(() => {
     if (lobby && isSignedIn && user) {
       const playerName = user.username || user.id;
@@ -78,6 +110,8 @@ export default function LobbyPage({
       kickPlayer({ lobbyId: lobby._id, playerNameToRemove: playerName });
     }
   };
+
+  const changeIsPublic = useMutation(api.lobby.changeIsPublic);
 
   const handleLeave = () => {
     if (lobby && user) {
@@ -148,8 +182,24 @@ export default function LobbyPage({
           </Button>
         </div>
       </div>
-      <div className="flex justify-between">
-        <p className="text-muted-foreground">Status: {lobby.status}</p>
+      <div className="flex justify-between w-full">
+        <div className="inline-flex items-center gap-4 w-full">
+          <Button
+            onClick={() =>
+              changeIsPublic({ lobbyId: lobby._id, isPublic: !lobby.isPublic })
+            }
+            variant={lobby.isPublic ? "outline" : "default"}
+            className={
+              lobby.isPublic
+                ? "bg-sky-500 text-white hover:bg-sky-400"
+                : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+            }
+          >
+            {lobby.isPublic ? "Public" : "Private"}
+          </Button>
+          <p className="text-muted-foreground">Status: {lobby.status}</p>
+        </div>
+
         {!isHost && (
           <div className="inline-flex items-center">
             <p className="text-muted-foreground pr-2">Game:</p>

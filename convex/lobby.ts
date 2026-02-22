@@ -16,6 +16,7 @@ export const createLobby = mutation({
     await ctx.db.insert("lobbies", {
       host: args.hostName,
       status: "waiting",
+      isPublic: false,
       selectedGame: "wordle",
       players: [args.hostName],
       playerStats: [{ name: args.hostName, wins: 0, bestTime: 0 }],
@@ -50,7 +51,7 @@ export const leaveLobby = mutation({
 
     if (updatedPlayers.length === 0) {
       // 1. Everyone left! We can safely close down the lobby.
-      await ctx.db.patch(args.lobbyId, { status: "canceled", players: [] });
+      await ctx.db.delete(args.lobbyId);
     } else if (lobby.host === args.playerName) {
       // 2. The host left, but others are still here. Pass the crown!
       const newHost = updatedPlayers[0]; // Give it to the next person in line
@@ -64,7 +65,7 @@ export const leaveLobby = mutation({
     }
   },
 });
-// New Query: Find a lobby by its short code
+// Find a lobby by its short code
 export const getLobbyByCode = query({
   args: { shortCode: v.string() },
   handler: async (ctx, args) => {
@@ -194,4 +195,23 @@ export const endRound = mutation({
       scores: [], 
     });
   }
+});
+
+
+export const getPublicLobbies = query({
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("lobbies")
+      .filter((q) => q.and(q.eq(q.field("isPublic"), true), q.eq(q.field("status"), "waiting")))
+      .collect();
+  },
+});
+
+export const changeIsPublic = mutation({
+  args: { lobbyId: v.id("lobbies"), isPublic: v.boolean() },
+  handler: async (ctx, args) => {
+    const lobby = await ctx.db.get(args.lobbyId);
+    if (!lobby) throw new Error("Lobby not found");
+    await ctx.db.patch(args.lobbyId, { isPublic: args.isPublic });
+  },
 });
