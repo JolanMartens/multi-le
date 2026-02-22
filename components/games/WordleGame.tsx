@@ -17,11 +17,46 @@ export default function WordleGame({
 }) {
   const { user } = useUser();
   const submitScore = useMutation(api.lobby.submitScore);
-  const endRound = useMutation(api.lobby.endRound); // 2. Hook up endRound
+  const endRound = useMutation(api.lobby.endRound);
+  const reportWord = useMutation(api.lobby.reportWord);
 
   // 3. Extract onKeyPress!
   const { guesses, currentGuess, isGameOver, isGameWon, errorMsg, onKeyPress } =
     useWordle(lobby.targetWord);
+
+  // State to track if the word has been reported
+  const [reported, setReported] = useState(false);
+
+  const [showReportPopup, setShowReportPopup] = useState(false);
+  const [reportProgress, setReportProgress] = useState(100);
+
+  useEffect(() => {
+    if (isGameOver && !reported) {
+      setShowReportPopup(true);
+      setReportProgress(100);
+
+      const duration = 10000; // 10 seconds
+      const startTime = Date.now();
+
+      const interval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const remainingPercentage = Math.max(
+          0,
+          100 - (elapsed / duration) * 100,
+        );
+
+        setReportProgress(remainingPercentage);
+
+        // Hide popup and clear interval when time is up
+        if (elapsed >= duration) {
+          setShowReportPopup(false);
+          clearInterval(interval);
+        }
+      }, 16); // ~60fps for a silky smooth progress bar
+
+      return () => clearInterval(interval);
+    }
+  }, [isGameOver, reported]);
 
   // 4. The Live Timer State
   const [timeStr, setTimeStr] = useState("0.0s");
@@ -163,6 +198,38 @@ export default function WordleGame({
         guesses={guesses}
         targetWord={lobby.targetWord}
       />
+
+      {showReportPopup && !reported && (
+        <div className="fixed bottom-6 right-6 z-50 w-64 bg-background border shadow-xl rounded-lg overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300">
+          <div className="p-4 flex flex-col gap-2">
+            <p className="text-sm font-medium text-muted-foreground text-center">
+              Notice a problem with this word?
+            </p>
+            <Button
+              className="w-full font-bold hover:bg-red-500"
+              variant="destructive"
+              onClick={async () => {
+                if (!user) return;
+                await reportWord({
+                  reporter: user.username || user.id,
+                  reportedWord: lobby.targetWord,
+                });
+                setReported(true);
+                setShowReportPopup(false); // Hide immediately on click
+              }}
+            >
+              Report Word
+            </Button>
+          </div>
+          {/* The Timer Bar */}
+          <div className="h-1.5 w-full bg-secondary">
+            <div
+              className="h-full bg-primary transition-none"
+              style={{ width: `${reportProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Host Control: End Round Manually */}
       {isHost && (

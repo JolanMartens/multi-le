@@ -215,3 +215,15 @@ export const changeIsPublic = mutation({
     await ctx.db.patch(args.lobbyId, { isPublic: args.isPublic });
   },
 });
+
+export const reportWord = mutation({
+  args: { reporter: v.string(), reportedWord: v.string() },
+  handler: async (ctx, args) => {
+    
+    await ctx.db.insert("reportedWords", {
+      reporter: args.reporter,
+      word: args.reportedWord,
+    });
+    
+  },
+});

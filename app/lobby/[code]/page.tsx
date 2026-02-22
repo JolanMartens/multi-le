@@ -336,7 +336,7 @@ export default function LobbyPage({
           <h2 className="text-xl font-semibold">Players Joined:</h2>
           <div className="inline-flex items-center gap-1">
             <h2 className="text-xl font-semibold">{lobby.players.length}</h2>
-            <img src="/fatcat.png" alt="" className="h-[2em] w-auto" />
+            <img src="/users.svg" alt="" className="h-[1.2em] w-auto" />
           </div>
         </div>
         <ul className="flex flex-col gap-2">
