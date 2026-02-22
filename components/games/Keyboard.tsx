@@ -15,27 +15,65 @@ export default function Keyboard({
   guesses: string[];
   targetWord: string;
 }) {
-  const getKeyColor = (key: string) => {
-    let status = "bg-secondary text-foreground";
-    if (key.length > 1) return status; // Enter/Backspace
+  // 1. Figure out the highest status for every key pressed so far
+  const keyStatuses: Record<string, "green" | "yellow" | "gray"> = {};
 
-    for (const guess of guesses) {
-      for (let i = 0; i < guess.length; i++) {
-        if (guess[i] === key) {
-          if (targetWord[i] === key)
-            return "bg-green-500 text-white hover:bg-green-600";
-          if (
-            targetWord.includes(key) &&
-            status !== "bg-green-500 text-white hover:bg-green-600"
-          ) {
-            status = "bg-yellow-500 text-white hover:bg-yellow-600";
-          } else if (status === "bg-secondary text-foreground") {
-            status = "bg-zinc-600 text-white hover:bg-zinc-700";
-          }
+  guesses.forEach((guess) => {
+    const targetLetters: (string | null)[] = targetWord.split("");
+    const guessLetters: (string | null)[] = guess.split("");
+    const rowStatuses = Array(5).fill("gray");
+
+    // Pass 1: Greens
+    for (let i = 0; i < 5; i++) {
+      if (guessLetters[i] === targetLetters[i]) {
+        rowStatuses[i] = "green";
+        targetLetters[i] = null;
+        guessLetters[i] = null;
+      }
+    }
+
+    // Pass 2: Yellows
+    for (let i = 0; i < 5; i++) {
+      if (guessLetters[i] !== null) {
+        const targetIdx = targetLetters.indexOf(guessLetters[i]);
+        if (targetIdx !== -1) {
+          rowStatuses[i] = "yellow";
+          targetLetters[targetIdx] = null;
         }
       }
     }
-    return status;
+
+    // Apply to overall key statuses (Green overrides Yellow overrides Gray)
+    for (let i = 0; i < 5; i++) {
+      const letter = guess[i];
+      const status = rowStatuses[i];
+
+      if (status === "green") {
+        keyStatuses[letter] = "green";
+      } else if (status === "yellow" && keyStatuses[letter] !== "green") {
+        keyStatuses[letter] = "yellow";
+      } else if (
+        status === "gray" &&
+        keyStatuses[letter] !== "green" &&
+        keyStatuses[letter] !== "yellow"
+      ) {
+        keyStatuses[letter] = "gray";
+      }
+    }
+  });
+
+  // 2. Assign the visual colors based on that status map
+  const getKeyColor = (key: string) => {
+    if (key.length > 1)
+      return "bg-secondary text-foreground hover:bg-secondary/80"; // Enter/Backspace
+
+    const status = keyStatuses[key];
+    if (status === "green") return "bg-green-500 text-white hover:bg-green-600";
+    if (status === "yellow")
+      return "bg-yellow-500 text-white hover:bg-yellow-600";
+    if (status === "gray") return "bg-zinc-600 text-white hover:bg-zinc-700";
+
+    return "bg-secondary text-foreground hover:bg-secondary/80"; // Default unused key
   };
 
   return (

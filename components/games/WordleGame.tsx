@@ -5,7 +5,8 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
-import Keyboard from "./Keyboard"; // 1. Import your keyboard!
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Keyboard from "./Keyboard";
 
 export default function WordleGame({
   lobby,
@@ -48,12 +49,35 @@ export default function WordleGame({
   const isHost = lobby.host === (user?.username || user?.id);
 
   // Helper to figure out the box color...
-  const getLetterColor = (letter: string, index: number) => {
-    if (lobby.targetWord[index] === letter)
-      return "bg-green-500 text-white border-green-500";
-    if (lobby.targetWord.includes(letter))
-      return "bg-yellow-500 text-white border-yellow-500";
-    return "bg-zinc-500 text-white border-zinc-500";
+  // NEW: Two-pass algorithm for correct Wordle coloring
+  const getRowColors = (guess: string, target: string) => {
+    const colors = Array(5).fill("bg-zinc-500 text-white border-zinc-500"); // Default to gray
+    if (!guess) return colors;
+
+    const targetLetters: (string | null)[] = target.split("");
+    const guessLetters: (string | null)[] = guess.split("");
+
+    // Pass 1: Find all Greens
+    for (let i = 0; i < 5; i++) {
+      if (guessLetters[i] === targetLetters[i]) {
+        colors[i] = "bg-green-500 text-white border-green-500";
+        targetLetters[i] = null; // Remove from available target letters
+        guessLetters[i] = null; // Mark guess letter as resolved
+      }
+    }
+
+    // Pass 2: Find Yellows from the remaining letters
+    for (let i = 0; i < 5; i++) {
+      if (guessLetters[i] !== null) {
+        const targetIdx = targetLetters.indexOf(guessLetters[i]);
+        if (targetIdx !== -1) {
+          colors[i] = "bg-yellow-500 text-white border-yellow-500";
+          targetLetters[targetIdx] = null; // Consume the available letter
+        }
+      }
+    }
+
+    return colors;
   };
 
   return (
@@ -92,12 +116,19 @@ export default function WordleGame({
               ? currentGuess
               : "";
 
+          // NEW: Get the colors for the whole row at once!
+          const rowColors = isPastRow
+            ? getRowColors(rowWord, lobby.targetWord)
+            : [];
+
           return (
             <div key={rowIndex} className="grid grid-cols-5 gap-2">
               {Array.from({ length: 5 }).map((_, colIndex) => {
                 const letter = rowWord[colIndex] || "";
+
+                // NEW: Read the color from our rowColors array
                 const colorClass = isPastRow
-                  ? getLetterColor(letter, colIndex)
+                  ? rowColors[colIndex]
                   : "border-border bg-background text-foreground";
                 const activeClass =
                   isCurrentRow && letter ? "border-primary" : "";
@@ -117,8 +148,12 @@ export default function WordleGame({
       </div>
 
       {errorMsg && (
-        <div className="text-red-500 font-bold bg-red-100 px-4 py-2 rounded-md animate-pulse">
-          {errorMsg}
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-60 max-w-md px-4 text-center">
+          <Alert className="font-bold bg-red-200 px-4 py-2 rounded-md animate-pulse shadow-lg border border-red-400">
+            <AlertDescription className="text-red-500">
+              {errorMsg}
+            </AlertDescription>
+          </Alert>
         </div>
       )}
 

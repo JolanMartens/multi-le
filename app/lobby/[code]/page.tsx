@@ -205,7 +205,7 @@ export default function LobbyPage({
                   isPublic: !lobby.isPublic,
                 })
               }
-              variant={lobby.isPublic ? "outline" : "default"}
+              variant="default"
               className={
                 lobby.isPublic
                   ? "bg-sky-500 text-white hover:bg-sky-400"
