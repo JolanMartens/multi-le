@@ -7,6 +7,7 @@ import { SignInButton, UserButton, useUser } from "@clerk/nextjs"; // 1. Import 
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,33 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
+const getRowColors = (guess: string, target: string) => {
+  const colors = Array(5).fill("bg-zinc-500 text-white border-zinc-500");
+  if (!guess) return colors;
+
+  const targetLetters: (string | null)[] = target.split("");
+  const guessLetters: (string | null)[] = guess.split("");
+
+  for (let i = 0; i < 5; i++) {
+    if (guessLetters[i] === targetLetters[i]) {
+      colors[i] = "bg-green-500 text-white border-green-500";
+      targetLetters[i] = null;
+      guessLetters[i] = null;
+    }
+  }
+
+  for (let i = 0; i < 5; i++) {
+    if (guessLetters[i] !== null) {
+      const targetIdx = targetLetters.indexOf(guessLetters[i]);
+      if (targetIdx !== -1) {
+        colors[i] = "bg-yellow-500 text-white border-yellow-500";
+        targetLetters[targetIdx] = null;
+      }
+    }
+  }
+  return colors;
+};
 
 export default function HomePage() {
   const createLobby = useMutation(api.lobby.createLobby);
@@ -27,6 +55,13 @@ export default function HomePage() {
   const { user, isSignedIn } = useUser();
 
   const [joinCode, setJoinCode] = useState("");
+  const [showMyGrid, setShowMyGrid] = useState(false);
+
+  // Daily Queries
+  const dailyLeaderboard = useQuery(api.daily.getTodayLeaderboard);
+  const myDailyScore = useQuery(api.daily.getUserTodayScore, {
+    playerName: user?.username || user?.id || "",
+  });
 
   const handleJoinGame = () => {
     if (joinCode.trim().length === 6) {
@@ -48,15 +83,6 @@ export default function HomePage() {
       console.error("Failed to create lobby:", error);
     }
   };
-
-  // const handleJoinGame = async () => {
-  //   if (!user) return;
-
-  //   try {
-  //   } catch (error) {
-  //     console.error("Failed to join lobby:", error);
-  //   }
-  // };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-10 bg-background relative">
@@ -85,16 +111,139 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 5. Show Create/Join if logged in, otherwise force login */}
+      {/* Show Create/Join if logged in, otherwise force login */}
       {isSignedIn ? (
         <div className="flex flex-col gap-4 items-center">
-          <Button
-            onClick={handleCreateGame}
-            size="lg"
-            className="text-lg px-8 w-full"
-          >
-            Create New Game
-          </Button>
+          <ButtonGroup className="w-full">
+            <Button
+              onClick={handleCreateGame}
+              size="lg"
+              className="text-lg px-8"
+            >
+              Create New Game
+            </Button>
+            {/* DAILY MODAL TRIGGER */}
+            <Dialog onOpenChange={(isOpen) => !isOpen && setShowMyGrid(false)}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="px-8 border-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                >
+                  Daily
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Daily Wordle</DialogTitle>
+                  <DialogDescription>
+                    Everyone gets the same word today. Can you beat the clock?
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="flex flex-col gap-6 py-4">
+                  {/* PLAY OR SHOW BUTTON */}
+                  {myDailyScore === undefined ? (
+                    <Button disabled className="w-full">
+                      Loading...
+                    </Button>
+                  ) : myDailyScore === null ? (
+                    <Button
+                      size="lg"
+                      className="w-full font-bold text-lg bg-green-600 hover:bg-green-500 text-white"
+                      onClick={() => router.push("/daily")} // Assuming you will build this route!
+                    >
+                      Play Today's Word
+                    </Button>
+                  ) : (
+                    <div className="flex flex-col items-center gap-4 border p-4 rounded-lg bg-secondary/20">
+                      <p className="font-semibold text-center">
+                        You{" "}
+                        {myDailyScore.solved ? "solved it in" : "failed after"}{" "}
+                        {myDailyScore.guesses.length} guesses!
+                      </p>
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => setShowMyGrid(!showMyGrid)}
+                      >
+                        {showMyGrid ? "Hide Grid" : "Show My Grid"}
+                      </Button>
+
+                      {/* MINI GRID RENDERING */}
+                      {showMyGrid && (
+                        <div className="grid grid-rows-6 gap-1 w-fit mx-auto mt-2">
+                          {Array.from({ length: 6 }).map((_, rowIndex) => {
+                            const rowWord =
+                              rowIndex < myDailyScore.guesses.length
+                                ? myDailyScore.guesses[rowIndex]
+                                : "";
+                            const rowColors = rowWord
+                              ? getRowColors(rowWord, myDailyScore.targetWord)
+                              : Array(5).fill("bg-zinc-800 border-zinc-700");
+
+                            return (
+                              <div
+                                key={rowIndex}
+                                className="grid grid-cols-5 gap-1"
+                              >
+                                {Array.from({ length: 5 }).map(
+                                  (_, colIndex) => (
+                                    <div
+                                      key={colIndex}
+                                      className={`w-8 h-8 border flex items-center justify-center text-sm font-bold uppercase ${rowColors[colIndex]}`}
+                                    >
+                                      {rowWord[colIndex] || ""}
+                                    </div>
+                                  ),
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* LEADERBOARD */}
+                  <div className="border rounded-lg shadow-sm bg-card overflow-hidden">
+                    <div className="bg-muted px-4 py-2 border-b">
+                      <h3 className="font-bold text-sm">Today's Leaderboard</h3>
+                    </div>
+                    <ul className="flex flex-col max-h-[250px] overflow-y-auto p-2 gap-1">
+                      {dailyLeaderboard === undefined && (
+                        <p className="text-center text-xs py-4">Loading...</p>
+                      )}
+                      {dailyLeaderboard?.length === 0 && (
+                        <p className="text-center text-xs py-4 text-muted-foreground">
+                          No one has played yet today!
+                        </p>
+                      )}
+
+                      {dailyLeaderboard?.map((score, idx) => (
+                        <li
+                          key={score._id}
+                          className="flex justify-between items-center p-2 rounded-md hover:bg-secondary/50 text-sm"
+                        >
+                          <span className="font-medium flex items-center gap-2">
+                            <span className="text-muted-foreground w-4">
+                              {idx + 1}.
+                            </span>
+                            {score.playerName}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {score.solved
+                              ? `${score.guesses.length} tries • ${(score.timeMs / 1000).toFixed(1)}s`
+                              : "Failed"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </ButtonGroup>
 
           <div className="w-full max-w-sm">
             <div className="relative flex items-center gap-2">
