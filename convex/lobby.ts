@@ -2,6 +2,8 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { ANSWERS } from "../lib/words";
 
+const ADMIN_USER_ID = "user_39tAgbbp5T1RKVStVJOsgvU8geI";
+
 // Helper to generate a 6-character random room code
 function generateShortCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -112,14 +114,29 @@ export const startGame = mutation({
     const lobby = await ctx.db.get(args.lobbyId);
     if (!lobby) throw new Error("Lobby not found");
 
-    // Pick a random word from your answers array!
-    const randomWord = ANSWERS[Math.floor(Math.random() * ANSWERS.length)];
+    // Fetch all APPROVED reported words
+    const reportedWords = await ctx.db
+      .query("reportedWords")
+      .filter((q) => q.eq(q.field("approved"), true))
+      .collect();
+
+    // Create a Set of bad words for super fast lookups
+    const badWordsSet = new Set(reportedWords.map(r => r.word));
+
+    // Filter the ANSWERS array to remove the bad words
+    const safeWords = ANSWERS.filter(word => !badWordsSet.has(word));
+
+    // Fallback: If somehow EVERY word is reported, use the original array so the game doesn't crash
+    const wordPool = safeWords.length > 0 ? safeWords : ANSWERS;
+
+    // Pick a random word from the safe pool
+    const randomWord = wordPool[Math.floor(Math.random() * wordPool.length)];
 
     await ctx.db.patch(args.lobbyId, {
       status: "playing",
       startTime: Date.now(), 
-      targetWord: randomWord, // Store the answer secretly on the server
-      scores: [], // Reset the scoreboard!
+      targetWord: randomWord, 
+      scores: [], 
     });
   },
 });
@@ -223,7 +240,70 @@ export const reportWord = mutation({
     await ctx.db.insert("reportedWords", {
       reporter: args.reporter,
       word: args.reportedWord,
+      approved: false,
     });
     
+  },
+});
+
+export const getPendingReportedWords = query({
+  handler: async (ctx) => {
+    // Fetch all words that haven't been approved yet
+    return await ctx.db
+      .query("reportedWords")
+      .filter((q) => q.eq(q.field("approved"), false))
+      .collect();
+  },
+});
+
+export const approveReportedWord = mutation({
+  args: { reportId: v.id("reportedWords") },
+  handler: async (ctx, args) => {
+    // Grab the user's identity token
+    const identity = await ctx.auth.getUserIdentity();
+
+    // Check if they are logged in at all
+    if (!identity) {
+      throw new Error("Unauthenticated: You must be logged in.");
+    }
+
+    // Check if their ID matches the Admin ID
+    if (identity.subject !== ADMIN_USER_ID) {
+      throw new Error("Unauthorized: Only admins can perform this action.");
+    }
+
+    // If they pass the checks, approve the word!
+    await ctx.db.patch(args.reportId, { approved: true });
+  },
+});
+
+export const removeReportWord = mutation({
+  args: { reportId: v.id("reportedWords") },
+  handler: async (ctx, args) => {
+    // Grab the user's identity token
+    const identity = await ctx.auth.getUserIdentity();
+
+    // Check if they are logged in at all
+    if (!identity) {
+      throw new Error("Unauthenticated: You must be logged in.");
+    }
+
+    // Check if their ID matches the Admin ID
+    if (identity.subject !== ADMIN_USER_ID) {
+      throw new Error("Unauthorized: Only admins can perform this action.");
+    }
+
+    // If they pass the checks, approve the word!
+    await ctx.db.delete(args.reportId);
+  },
+});
+
+export const getBannedWords = query({
+  handler: async (ctx) => {
+    // Fetch all words that have been approved (i.e., banned)
+    return await ctx.db
+      .query("reportedWords")
+      .filter((q) => q.eq(q.field("approved"), true))
+      .collect();
   },
 });
