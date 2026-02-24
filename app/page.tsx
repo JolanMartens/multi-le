@@ -128,7 +128,7 @@ export default function HomePage() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="px-8 border-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                  className="px-8 border-gray-500 font-semibold hover:bg-gray-100 hover:text-gray-700"
                 >
                   Daily
                 </Button>
