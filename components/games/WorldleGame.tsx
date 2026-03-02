@@ -63,7 +63,6 @@ export default function WorldleGame({
       setIsRoundOver(true);
     } else if (guesses.includes(guessedCountry.toLowerCase())) {
       setErrorMsg("Already guessed that country");
-      return;
     } else if (
       guessedCountry.trim().toLowerCase() !== target.trim().toLowerCase()
     ) {
@@ -75,10 +74,10 @@ export default function WorldleGame({
     ) {
       console.log(guessedCountry.toLowerCase());
       setErrorMsg("Not a valid country");
-      return;
     } else {
       setErrorMsg("What????, try again.");
     }
+    setGuessedCountry("");
   };
 
   return (
@@ -109,6 +108,14 @@ export default function WorldleGame({
                   }
               `}</style>
             )}
+            {guesses.map((guess) => (
+              <style key={guess}>{`
+              .${guess.replace(/\s+/g, ".")} { 
+              fill: #ff0000 !important; 
+              filter: drop-shadow(0 0 2px #ff0000);
+              }
+              `}</style>
+            ))}
             <WorldMap />
           </div>
         </div>

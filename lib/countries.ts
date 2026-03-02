@@ -38,7 +38,6 @@ export const WORLDLE_ALLOWED_GUESSES = [
   "algeria",
   "american samoa",
   "angola",
-  "anguilla",
   "antigua and barbuda",
   "argentina",
   "armenia",
