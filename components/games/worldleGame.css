@@ -26,9 +26,10 @@ path::selection {
     stroke: rgb(0, 0, 0);
     transition: 100ms;
 }
-.selected-country {
-    fill: rgb(11, 233, 67);
-    stroke: rgb(0, 0, 0);
-    stroke-width: 1;
-    transition: 100ms;
+
+.highlight-country {
+  fill: #ffcc00 !important;
+  stroke: #ffffff;
+  stroke-width: 2px;
+  transition: fill 0.5s ease;
 }

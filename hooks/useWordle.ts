@@ -1,6 +1,6 @@
 // hooks/useWordle.ts
 import { useState, useEffect, useCallback } from "react";
-import { ALLOWED_GUESSES } from "@/lib/words";
+import { WORDLE_ALLOWED_GUESSES } from "@/lib/words";
 
 export const useWordle = (solution: string) => {
   const [guesses, setGuesses] = useState<string[]>([]);
@@ -16,7 +16,7 @@ export const useWordle = (solution: string) => {
 
     if (key === "Enter") {
       if (currentGuess.length !== 5) return;
-      if (!ALLOWED_GUESSES.includes(currentGuess.toLowerCase())) {
+      if (!WORDLE_ALLOWED_GUESSES.includes(currentGuess.toLowerCase())) {
         setErrorMsg("Not in word list");
         return;
       }

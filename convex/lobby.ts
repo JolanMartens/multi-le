@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { ANSWERS } from "../lib/words";
+import { WORDLE_ANSWERS } from "../lib/words";
+import { WORLDLE_ANSWERS } from "../lib/countries";
 
 const ADMIN_USER_ID = "user_39tAgbbp5T1RKVStVJOsgvU8geI";
 
@@ -113,29 +114,40 @@ export const startGame = mutation({
   handler: async (ctx, args) => {
     const lobby = await ctx.db.get(args.lobbyId);
     if (!lobby) throw new Error("Lobby not found");
+    let target = "default";
 
-    // Fetch all APPROVED reported words
-    const reportedWords = await ctx.db
-      .query("reportedWords")
-      .filter((q) => q.eq(q.field("approved"), true))
-      .collect();
+    if (lobby.selectedGame == "wordle") {
+      // Fetch all APPROVED reported words
+      const reportedWords = await ctx.db
+        .query("reportedWords")
+        .filter((q) => q.eq(q.field("approved"), true))
+        .collect();
 
-    // Create a Set of bad words for super fast lookups
-    const badWordsSet = new Set(reportedWords.map(r => r.word));
+      // Create a Set of bad words for super fast lookups
+      const badWordsSet = new Set(reportedWords.map(r => r.word));
 
-    // Filter the ANSWERS array to remove the bad words
-    const safeWords = ANSWERS.filter(word => !badWordsSet.has(word));
+      // Filter the WORDLE_ANSWERS array to remove the bad words
+      const safeWords = WORDLE_ANSWERS.filter(word => !badWordsSet.has(word));
 
-    // Fallback: If somehow EVERY word is reported, use the original array so the game doesn't crash
-    const wordPool = safeWords.length > 0 ? safeWords : ANSWERS;
+      // Fallback: If somehow EVERY word is reported, use the original array so the game doesn't crash
+      const wordPool = safeWords.length > 0 ? safeWords : WORDLE_ANSWERS;
 
-    // Pick a random word from the safe pool
-    const randomWord = wordPool[Math.floor(Math.random() * wordPool.length)];
+      // Pick a random word from the safe pool
+      target = wordPool[Math.floor(Math.random() * wordPool.length)];
+
+    }
+    
+    if (lobby.selectedGame == "worldle") {
+
+      target = WORLDLE_ANSWERS[Math.floor(Math.random() * WORLDLE_ANSWERS.length)];
+
+    }
 
     await ctx.db.patch(args.lobbyId, {
       status: "playing",
       startTime: Date.now(), 
-      targetWord: randomWord, 
+      targetWord: target, 
+      round: 0,
       scores: [], 
     });
   },

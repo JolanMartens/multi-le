@@ -1,3 +1,7 @@
+interface WorldMapProps {
+  targetCountry: string;
+}
+
 export default function WorldMap() {
   return (
     <div>
@@ -6,9 +10,9 @@ export default function WorldMap() {
         fill="#ececec"
         height="857"
         stroke="black"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width=".2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth=".2"
         version="1.2"
         viewBox="0 0 2000 857"
         width="2000"

@@ -1,7 +1,7 @@
 // convex/daily.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { ANSWERS } from "../lib/words";
+import { WORDLE_ANSWERS } from "../lib/words";
 
 // Helper: Get YYYY-MM-DD
 function getTodayStr() {
@@ -26,8 +26,8 @@ export const getOrCreateTodayWord = mutation({
     for (let i = 0; i < date.length; i++) {
       hash = date.charCodeAt(i) + ((hash << 5) - hash);
     }
-    const index = Math.abs(hash) % ANSWERS.length;
-    const newWord = ANSWERS[index];
+    const index = Math.abs(hash) % WORDLE_ANSWERS.length;
+    const newWord = WORDLE_ANSWERS[index];
 
     // Save it to the database so everyone gets this exact word today
     await ctx.db.insert("dailyWords", { date, word: newWord });

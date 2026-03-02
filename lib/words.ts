@@ -1,5 +1,5 @@
 // Put your answers.txt here
-export const ANSWERS = [
+export const WORDLE_ANSWERS = [
   "aback", "abase", "abate", "abbey", "abbot", "abhor", "abide", "abled", "abode", "abort",
   "about", "above", "abuse", "abyss", "acorn", "acrid", "actor", "acute", "adage", "adapt",
   "adept", "admin", "admit", "adobe", "adopt", "adore", "adorn", "adult", "affix", "afire",
@@ -236,7 +236,7 @@ export const ANSWERS = [
 
 // Put your guesses.txt here
 // (Answers are merged into this list so they are valid guesses!)
-export const ALLOWED_GUESSES = [
+export const WORDLE_ALLOWED_GUESSES = [
   "aahed", "aalii", "aargh", "aarti", "abaca", "abaci", "aback", "abacs", "abaft", "abaka",
   "abamp", "aband", "abase", "abash", "abask", "abate", "abaya", "abbas", "abbed", "abbes",
   "abbey", "abbot", "abcee", "abeam", "abear", "abele", "abers", "abets", "abhor", "abide",
