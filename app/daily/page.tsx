@@ -58,6 +58,19 @@ export default function DailyPage() {
     }
   }, [isGameOver]);
 
+  const giveUp = () => {
+    if (user && startTime) {
+      submitDailyScore({
+        playerName: user.username || user.id,
+        guesses: guesses,
+        solved: false,
+        timeMs: Date.now() - startTime,
+      }).then(() => {
+        router.push("/");
+      });
+    }
+  };
+
   // Reusing your row color algorithm
   const getRowColors = (guess: string, target: string) => {
     const colors = Array(5).fill("bg-zinc-500 text-white border-zinc-500");
@@ -101,11 +114,7 @@ export default function DailyPage() {
         <div className="text-2xl font-mono font-bold text-primary">
           {timeStr}
         </div>
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => router.push("/")}
-        >
+        <Button variant="destructive" size="sm" onClick={() => giveUp()}>
           Give Up
         </Button>
       </div>

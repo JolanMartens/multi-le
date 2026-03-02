@@ -84,12 +84,12 @@ export const getTodayLeaderboard = query({
       .filter((q) => q.eq(q.field("date"), date))
       .collect();
 
-    // Sort: Solvers first, then fewest guesses, then fastest time
+    // Sort: Solvers first, then fastest time, then fewest guesses
     return scores.sort((a, b) => {
       if (a.solved && !b.solved) return -1;
       if (!a.solved && b.solved) return 1;
-      if (a.guesses.length !== b.guesses.length) return a.guesses.length - b.guesses.length;
-      return a.timeMs - b.timeMs;
+      if (a.timeMs !== b.timeMs) return a.timeMs - b.timeMs;
+      return a.guesses.length - b.guesses.length;
     });
   },
 });
