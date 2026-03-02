@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import "./worldleGame.css";
 import WorldMap from "./WorldMap";
-import { WORLDLE_ALLOWED_GUESSES } from "@/lib/countries";
+import { levenshtein, WORLDLE_ALLOWED_GUESSES } from "@/lib/countries";
 
 export default function WorldleGame({
   lobby,
@@ -53,10 +53,14 @@ export default function WorldleGame({
   const [guessedCountry, setGuessedCountry] = useState("");
 
   const guessCountry = () => {
-    if (!WORLDLE_ALLOWED_GUESSES.includes(guessedCountry.toLowerCase())) {
-      console.log(guessedCountry.toLowerCase());
-      setErrorMsg("Not a valid country");
-      return;
+    if (
+      guessedCountry.trim().toLowerCase() === target.trim().toLowerCase() ||
+      levenshtein(guessedCountry.toLowerCase(), target.toLowerCase()) <= 2
+    ) {
+      setErrorMsg("");
+      const newGuesses = [...guesses, guessedCountry.toLowerCase()];
+      setGuesses(newGuesses);
+      setIsRoundOver(true);
     } else if (guesses.includes(guessedCountry.toLowerCase())) {
       setErrorMsg("Already guessed that country");
       return;
@@ -67,12 +71,11 @@ export default function WorldleGame({
       const newGuesses = [...guesses, guessedCountry.toLowerCase()];
       setGuesses(newGuesses);
     } else if (
-      guessedCountry.trim().toLowerCase() === target.trim().toLowerCase()
+      !WORLDLE_ALLOWED_GUESSES.includes(guessedCountry.toLowerCase())
     ) {
-      setErrorMsg("");
-      const newGuesses = [...guesses, guessedCountry.toLowerCase()];
-      setGuesses(newGuesses);
-      setIsRoundOver(true);
+      console.log(guessedCountry.toLowerCase());
+      setErrorMsg("Not a valid country");
+      return;
     } else {
       setErrorMsg("What????, try again.");
     }
@@ -122,6 +125,7 @@ export default function WorldleGame({
           </div>
         )}
         <Input
+          autoFocus
           placeholder="Enter country name"
           value={guessedCountry}
           onChange={(e) => setGuessedCountry(e.target.value)}
