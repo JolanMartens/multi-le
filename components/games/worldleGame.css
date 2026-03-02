@@ -1,0 +1,34 @@
+
+.world-map {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: 100vw;
+    max-height: 100vh;
+    object-fit: contain;
+    background-color: rgb(255, 255, 255);
+    margin: 0 auto;
+}
+
+path {
+    fill: rgb(114, 114, 114);
+    stroke: rgb(0, 0, 0);
+    stroke-width: 1;
+    transition: 100ms;
+}
+path:hover {
+    fill: rgb(0, 75, 119);
+    stroke: rgb(0, 0, 0);
+    transition: 100ms;
+}
+path::selection {
+    fill: rgb(223, 11, 11);
+    stroke: rgb(0, 0, 0);
+    transition: 100ms;
+}
+.selected-country {
+    fill: rgb(11, 233, 67);
+    stroke: rgb(0, 0, 0);
+    stroke-width: 1;
+    transition: 100ms;
+}

@@ -53,7 +53,6 @@ export default function DailyPage() {
         solved: isGameWon,
         timeMs: Date.now() - startTime,
       }).then(() => {
-        // Send them back to the homepage after 3 seconds so they can see the leaderboard
         setTimeout(() => router.push("/"), 5000);
       });
     }
@@ -96,14 +95,18 @@ export default function DailyPage() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-6 p-4 sm:p-10 mt-2 sm:mt-5 w-full focus:outline-none min-h-screen bg-background">
+    <div className="flex flex-col items-center gap-6 p-4 sm:p-6 w-full focus:outline-none min-h-screen bg-background">
       <div className="flex justify-between w-full max-w-md items-center">
         <h1 className="text-3xl font-bold tracking-tight">Daily Wordle</h1>
         <div className="text-2xl font-mono font-bold text-primary">
           {timeStr}
         </div>
-        <Button variant="outline" size="sm" onClick={() => router.push("/")}>
-          Back
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => router.push("/")}
+        >
+          Give Up
         </Button>
       </div>
 
@@ -116,7 +119,7 @@ export default function DailyPage() {
       )}
 
       {/* The Wordle Grid */}
-      <div className="grid grid-rows-6 gap-2">
+      <div className="grid grid-rows-6 gap-1">
         {Array.from({ length: 6 }).map((_, rowIndex) => {
           const isCurrentRow = rowIndex === guesses.length;
           const isPastRow = rowIndex < guesses.length;
@@ -128,7 +131,7 @@ export default function DailyPage() {
           const rowColors = isPastRow ? getRowColors(rowWord, targetWord) : [];
 
           return (
-            <div key={rowIndex} className="grid grid-cols-5 gap-2">
+            <div key={rowIndex} className="grid grid-cols-5 gap-1">
               {Array.from({ length: 5 }).map((_, colIndex) => {
                 const letter = rowWord[colIndex] || "";
                 const colorClass = isPastRow

@@ -9,8 +9,8 @@ import { useRouter } from "next/navigation";
 
 // import game components
 import WordleGame from "@/components/games/WordleGame";
+import WorldleGame from "@/components/games/WorldleGame";
 
-// Notice we changed params.id to params.code to match the new folder name!
 export default function LobbyPage({
   params,
 }: {
@@ -160,11 +160,14 @@ export default function LobbyPage({
         </div>
       );
     }
+    if (lobby.selectedGame === "worldle") {
+      return <WorldleGame lobby={lobby} onLeave={handleLeave} />;
+    }
   }
 
   // State 5: Everything is loaded!
   return (
-    <div className="flex flex-col gap-4 p-10 max-w-xl mx-auto mt-10">
+    <div className="flex flex-col gap-4 p-10 max-w-xl mx-auto mt-1">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Game Lobby</h1>
         <div className="flex gap-4 items-center">
@@ -281,7 +284,6 @@ export default function LobbyPage({
             </ToggleGroupItem>
 
             <ToggleGroupItem
-              disabled
               value="worldle"
               aria-label="Toggle worldle"
               className="flex-1 h-auto border-none shadow-none py-2"
