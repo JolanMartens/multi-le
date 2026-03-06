@@ -100,7 +100,7 @@ export default function WorldleGame({
         <div className="flex justify-between items-center ">
           <div className="map-container">
             {/* This dynamically creates the CSS rule for ONLY the current target */}
-            {target && (
+            {!isRoundOver && target && (
               <style>{`
                 .${target.replace(/\s+/g, ".")} { 
                 fill: #fffb00 !important; 
@@ -108,14 +108,24 @@ export default function WorldleGame({
                   }
               `}</style>
             )}
-            {guesses.map((guess) => (
-              <style key={guess}>{`
-              .${guess.replace(/\s+/g, ".")} { 
-              fill: #ff0000 !important; 
-              filter: drop-shadow(0 0 2px #ff0000);
-              }
+            {isRoundOver && target && (
+              <style>{`
+                .${target.replace(/\s+/g, ".")} { 
+                fill: #00d32e !important; 
+                filter: drop-shadow(0 0 15px #1eff00);
+                  }
               `}</style>
-            ))}
+            )}
+            {guesses
+              .filter((guess) => guess.toLowerCase() !== target?.toLowerCase())
+              .map((guess) => (
+                <style key={guess}>{`
+                  .${guess.replace(/\s+/g, ".")} { 
+                    fill: #ff0000 !important; 
+                    filter: drop-shadow(0 0 2px #ff0000);
+                  }
+                `}</style>
+              ))}
             <WorldMap />
           </div>
         </div>
